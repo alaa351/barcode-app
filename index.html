@@ -6,24 +6,23 @@
   <title>Barcode App</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
-  <!-- مكتبة QuaggaJS لمسح الباركود من الصورة -->
   <script src="https://unpkg.com/quagga@0.12.1/dist/quagga.min.js"></script>
 </head>
 <body>
   <h1>تطبيق إدارة الباركود</h1>
 
-  <!-- صفحة إضافة المنتج -->
+  <!-- قسم إضافة المنتج -->
   <section id="add-section">
     <h2>إضافة منتج جديد</h2>
-    <input type="file" id="barcode-image" accept="image/*" capture="environment" style="display:none;">
-    <button id="scan-barcode-btn">التقاط صورة الباركود</button>
+    <button id="scan-barcode-btn">مسح الباركود بالكاميرا</button>
+    <div id="video-container" style="position: relative; width: 100%; max-width: 400px; margin: 10px auto;"></div>
     <p id="barcode-result">الباركود: لم يتم المسح بعد</p>
     <input type="text" id="name-input" placeholder="اسم المنتج">
     <input type="number" id="price-input" placeholder="السعر">
     <button id="add-btn">حفظ المنتج</button>
   </section>
 
-  <!-- صفحة قائمة المنتجات -->
+  <!-- قسم قائمة المنتجات -->
   <section id="list-section">
     <h2>قائمة المنتجات</h2>
     <table id="products-table">
@@ -39,11 +38,11 @@
     </table>
   </section>
 
-  <!-- صفحة مسح الباركود لإظهار السعر -->
+  <!-- قسم مسح الباركود لعرض السعر -->
   <section id="scan-section">
     <h2>مسح الباركود لعرض السعر</h2>
-    <input type="file" id="scan-image" accept="image/*" capture="environment" style="display:none;">
-    <button id="scan-price-btn">التقاط صورة الباركود</button>
+    <button id="scan-price-btn">مسح الباركود بالكاميرا</button>
+    <div id="video-price-container" style="position: relative; width: 100%; max-width: 400px; margin: 10px auto;"></div>
     <p id="scan-result"></p>
   </section>
 
