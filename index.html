@@ -6,7 +6,7 @@
   <title>Barcode App</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
-  <!-- مكتبة QuaggaJS لمسح الباركود بالكاميرا -->
+  <!-- مكتبة QuaggaJS لمسح الباركود من الصورة -->
   <script src="https://unpkg.com/quagga@0.12.1/dist/quagga.min.js"></script>
 </head>
 <body>
@@ -15,7 +15,8 @@
   <!-- صفحة إضافة المنتج -->
   <section id="add-section">
     <h2>إضافة منتج جديد</h2>
-    <button id="scan-barcode-btn">مسح الباركود بالكاميرا</button>
+    <input type="file" id="barcode-image" accept="image/*" capture="environment" style="display:none;">
+    <button id="scan-barcode-btn">التقاط صورة الباركود</button>
     <p id="barcode-result">الباركود: لم يتم المسح بعد</p>
     <input type="text" id="name-input" placeholder="اسم المنتج">
     <input type="number" id="price-input" placeholder="السعر">
@@ -41,7 +42,8 @@
   <!-- صفحة مسح الباركود لإظهار السعر -->
   <section id="scan-section">
     <h2>مسح الباركود لعرض السعر</h2>
-    <button id="scan-price-btn">مسح الباركود بالكاميرا</button>
+    <input type="file" id="scan-image" accept="image/*" capture="environment" style="display:none;">
+    <button id="scan-price-btn">التقاط صورة الباركود</button>
     <p id="scan-result"></p>
   </section>
 

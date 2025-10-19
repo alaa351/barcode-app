@@ -1,163 +1,118 @@
-let db;
+// قاعدة بيانات المنتجات في LocalStorage
+let products = JSON.parse(localStorage.getItem("products")) || [];
 
-// فتح قاعدة البيانات IndexedDB
-const request = indexedDB.open("BarcodeDB", 1);
-
-request.onupgradeneeded = function(event) {
-  db = event.target.result;
-  const objectStore = db.createObjectStore("products", { keyPath: "barcode" });
-  objectStore.createIndex("name", "name", { unique: false });
-  objectStore.createIndex("price", "price", { unique: false });
-};
-
-request.onsuccess = function(event) {
-  db = event.target.result;
-  displayProducts();
-};
-
-request.onerror = function(event) {
-  console.error("Database error:", event.target.errorCode);
-};
-
-// ================== إضافة المنتج ==================
-document.getElementById("scan-barcode-btn").addEventListener("click", function() {
-  Quagga.init({
-    inputStream : {
-      name : "Live",
-      type : "LiveStream",
-      target: document.querySelector('body'),
-      constraints: { facingMode: "environment" }
-    },
-    decoder : {
-      readers : ["code_128_reader","ean_reader","ean_8_reader","code_39_reader","upc_reader"]
-    }
-  }, function(err) {
-      if (err) { console.log(err); return; }
-      Quagga.start();
+// تحديث جدول المنتجات
+function updateTable() {
+  const tbody = document.querySelector("#products-table tbody");
+  tbody.innerHTML = "";
+  products.forEach((product, index) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${product.barcode}</td>
+      <td>${product.name}</td>
+      <td>${product.price}</td>
+      <td><button onclick="deleteProduct(${index})">حذف</button></td>
+    `;
+    tbody.appendChild(tr);
   });
+}
 
-  Quagga.onDetected(function(result) {
-    const code = result.codeResult.code;
-    document.getElementById("barcode-result").innerText = "الباركود: " + code;
-    window.scannedBarcode = code;
-    Quagga.stop();
-  });
-});
+// حذف منتج
+function deleteProduct(index) {
+  products.splice(index, 1);
+  localStorage.setItem("products", JSON.stringify(products));
+  updateTable();
+}
 
-document.getElementById("add-btn").addEventListener("click", function() {
-  const barcode = window.scannedBarcode;
-  const name = document.getElementById("name-input").value;
-  const price = parseFloat(document.getElementById("price-input").value);
+// إضافة منتج جديد
+document.getElementById("add-btn").addEventListener("click", () => {
+  const barcode = document.getElementById("barcode-result").textContent;
+  const name = document.getElementById("name-input").value.trim();
+  const price = document.getElementById("price-input").value.trim();
 
-  if (!barcode || !name || !price) {
-    alert("الرجاء مسح الباركود وإدخال جميع البيانات!");
+  if (!barcode || barcode === "الباركود: لم يتم المسح بعد") {
+    alert("يرجى التقاط صورة الباركود أولاً!");
+    return;
+  }
+  if (!name || !price) {
+    alert("يرجى إدخال الاسم والسعر!");
     return;
   }
 
-  const transaction = db.transaction(["products"], "readwrite");
-  const store = transaction.objectStore("products");
-  store.put({ barcode, name, price });
+  products.push({ barcode, name, price });
+  localStorage.setItem("products", JSON.stringify(products));
+  updateTable();
 
-  transaction.oncomplete = function() {
-    displayProducts();
-    window.scannedBarcode = null;
-    document.getElementById("barcode-result").innerText = "الباركود: لم يتم المسح بعد";
-    document.getElementById("name-input").value = "";
-    document.getElementById("price-input").value = "";
-  };
+  document.getElementById("barcode-result").textContent = "الباركود: لم يتم المسح بعد";
+  document.getElementById("name-input").value = "";
+  document.getElementById("price-input").value = "";
+
+  alert("تمت إضافة المنتج بنجاح!");
 });
 
-// ================== عرض المنتجات ==================
-function displayProducts() {
-  const tbody = document.querySelector("#products-table tbody");
-  tbody.innerHTML = "";
+// ----------------------------------------------------------------
+// مسح الباركود لإضافة المنتج من صورة
+// ----------------------------------------------------------------
+document.getElementById("scan-barcode-btn").addEventListener("click", () => {
+  document.getElementById("barcode-image").click();
+});
 
-  const transaction = db.transaction(["products"], "readonly");
-  const store = transaction.objectStore("products");
+document.getElementById("barcode-image").addEventListener("change", (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
 
-  store.openCursor().onsuccess = function(event) {
-    const cursor = event.target.result;
-    if (cursor) {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${cursor.value.barcode}</td>
-        <td>${cursor.value.name}</td>
-        <td>${cursor.value.price}</td>
-        <td>
-          <button onclick='editProduct("${cursor.value.barcode}")'>تعديل</button>
-          <button onclick='deleteProduct("${cursor.value.barcode}")'>حذف</button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-      cursor.continue();
-    }
-  };
-}
-
-// ================== تعديل المنتج ==================
-function editProduct(barcode) {
-  const transaction = db.transaction(["products"], "readwrite");
-  const store = transaction.objectStore("products");
-  const request = store.get(barcode);
-
-  request.onsuccess = function(event) {
-    const data = event.target.result;
-    const newName = prompt("عدل الاسم:", data.name);
-    const newPrice = parseFloat(prompt("عدل السعر:", data.price));
-    if (newName && !isNaN(newPrice)) {
-      store.put({ barcode: data.barcode, name: newName, price: newPrice });
-      transaction.oncomplete = displayProducts;
-    }
-  };
-}
-
-// ================== حذف المنتج ==================
-function deleteProduct(barcode) {
-  const transaction = db.transaction(["products"], "readwrite");
-  const store = transaction.objectStore("products");
-  store.delete(barcode);
-  transaction.oncomplete = displayProducts;
-}
-
-// ================== مسح الباركود لعرض السعر ==================
-document.getElementById("scan-price-btn").addEventListener("click", function() {
-  Quagga.init({
-    inputStream : {
-      name : "Live",
-      type : "LiveStream",
-      target: document.querySelector('body'),
-      constraints: { facingMode: "environment" }
-    },
-    decoder : {
-      readers : ["code_128_reader","ean_reader","ean_8_reader","code_39_reader","upc_reader"]
-    }
-  }, function(err) {
-      if (err) { console.log(err); return; }
-      Quagga.start();
-  });
-
-  Quagga.onDetected(function(result) {
-    const code = result.codeResult.code;
-    Quagga.stop();
-
-    const transaction = db.transaction(["products"], "readonly");
-    const store = transaction.objectStore("products");
-    const request = store.get(code);
-
-    request.onsuccess = function(event) {
-      const data = event.target.result;
-      if (data) {
-        document.getElementById("scan-result").innerText = `المنتج: ${data.name} - السعر: ${data.price}`;
+  const reader = new FileReader();
+  reader.onload = function() {
+    Quagga.decodeSingle({
+      src: reader.result,
+      numOfWorkers: 0,
+      decoder: { readers: ["code_128_reader","ean_reader","ean_8_reader"] }
+    }, function(result) {
+      if (result && result.codeResult) {
+        document.getElementById("barcode-result").textContent = result.codeResult.code;
       } else {
-        document.getElementById("scan-result").innerText = "لم يتم العثور على المنتج";
+        alert("لم يتم التعرف على الباركود!");
       }
-    };
-  });
+    });
+  };
+  reader.readAsDataURL(file);
 });
 
-// ================== تسجيل Service Worker ==================
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js')
-  .then(() => console.log("Service Worker مسجل"))
-  .catch(err => console.error("Service Worker خطأ:", err));
-}
+// ----------------------------------------------------------------
+// مسح الباركود لإظهار السعر من صورة
+// ----------------------------------------------------------------
+document.getElementById("scan-price-btn").addEventListener("click", () => {
+  document.getElementById("scan-image").click();
+});
+
+document.getElementById("scan-image").addEventListener("change", (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function() {
+    Quagga.decodeSingle({
+      src: reader.result,
+      numOfWorkers: 0,
+      decoder: { readers: ["code_128_reader","ean_reader","ean_8_reader"] }
+    }, function(result) {
+      if (result && result.codeResult) {
+        const code = result.codeResult.code;
+        const product = products.find(p => p.barcode === code);
+        if (product) {
+          document.getElementById("scan-result").textContent = `المنتج: ${product.name}, السعر: ${product.price}`;
+        } else {
+          document.getElementById("scan-result").textContent = "الباركود غير موجود!";
+        }
+      } else {
+        alert("لم يتم التعرف على الباركود!");
+      }
+    });
+  };
+  reader.readAsDataURL(file);
+});
+
+// عند تحميل الصفحة
+window.addEventListener("load", () => {
+  updateTable();
+});
